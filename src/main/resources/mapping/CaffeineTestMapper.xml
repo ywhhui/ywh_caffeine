@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ywh.ywh_caffeine.mapper.CaffeineTestMapper">
+
+    <resultMap type="com.ywh.ywh_caffeine.model.ToDoMsg" id="todoMsgResult">
+        <result property="id" column="id"/>
+        <result property="accout" column="accout"/>
+        <result property="acttype" column="acttype"/>
+        <result property="msgType" column="msgType"/>
+        <result property="msgTitle" column="msgTitle"/>
+        <!--<result property="createTime" column="create_time"/>-->
+        <!--<result property="updateTime" column="update_time"/>-->
+
+    </resultMap>
+
+    <sql id="selectTodoMsgVo">
+        select id, accout, acttype, msgType, msgTitle,create_time, update_time from todo_msg
+    </sql>
+
+
+    <select id="query" parameterType="com.ywh.ywh_caffeine.model.ToDoMsg" resultMap="todoMsgResult">
+        <include refid="selectTodoMsgVo"/>
+        <where>
+            <if test="id != null  and id != ''">and id = #{id}</if>
+            <if test="accout != null  and accout != ''">and accout  like concat('%',#{accout}, '%')</if>
+        </where>
+        order by id desc
+    </select>
+
+</mapper>
