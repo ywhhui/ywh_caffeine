@@ -38,9 +38,32 @@ public class CaffeineTestServiceImpl implements CaffeineTestService {
     private CaffeineConfig caffeineConfig;
 
     @Override
-    public ResultVo query() throws Exception {
+    public ResultVo query(String accout) throws Exception {
+        logger.info("query accout:{}",accout);
         ResultVo resultVo = new ResultVo();
         String cacheKey = "test_ywh";
+        if(caffeineConfig.isEnableCache()){
+            Object cacheIfPresent = cache.getIfPresent(cacheKey);
+            logger.info("cacheIfPresent:{}",gson.toJson(cacheIfPresent));
+            if(null !=cacheIfPresent ){
+                resultVo.setData(cacheIfPresent);
+                return resultVo;
+            }
+        }
+        List<ToDoMsg> query = caffeineTestMapper.query(new ToDoMsg());
+        if(!CollectionUtil.isEmpty(query)){
+            cache.put(cacheKey,query);
+        }
+        resultVo.setData(query);
+        return resultVo;
+    }
+
+    @Override
+    public ResultVo getList(ToDoMsg todoMsg) throws Exception {
+        String jsonStr = gson.toJson(todoMsg);
+        logger.info("getList todoMsg:{}",jsonStr);
+        ResultVo resultVo = new ResultVo();
+        String cacheKey = "test_ywh2";
         if(caffeineConfig.isEnableCache()){
             Object cacheIfPresent = cache.getIfPresent(cacheKey);
             logger.info("cacheIfPresent:{}",gson.toJson(cacheIfPresent));
