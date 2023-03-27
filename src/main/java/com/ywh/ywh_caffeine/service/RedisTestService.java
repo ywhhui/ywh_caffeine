@@ -4,12 +4,9 @@ import com.ywh.ywh_caffeine.model.ToDoMsg;
 import com.ywh.ywh_caffeine.vo.ResultVo;
 
 /**
- * caffeine相关验证
+ * redis 测试
  */
-public interface CaffeineTestService {
-
-
-    ResultVo query(String accout) throws Exception;
+public interface RedisTestService {
 
     ResultVo getList(ToDoMsg todoMsg) throws Exception;
 }
