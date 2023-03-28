@@ -23,4 +23,15 @@ public class RedisTestController {
     public ResultVo getList(@RequestBody ToDoMsg todoMsg) throws Exception {
         return redisTestService.getList(todoMsg);
     }
+
+    /**
+     * 分布式锁测试
+     * @param todoMsg
+     * @return
+     * @throws Exception
+     */
+    @PostMapping("/luaTest")
+    public ResultVo luaTest(@RequestBody ToDoMsg todoMsg) throws Exception {
+        return redisTestService.luaTest(todoMsg);
+    }
 }
