@@ -1,20 +1,26 @@
 package com.ywh.ywh_caffeine.utils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.connection.RedisStringCommands;
 import org.springframework.data.redis.connection.ReturnType;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.types.Expiration;
 import org.springframework.stereotype.Component;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 @Component
 public class RedisUtil {
+
+    private static final Logger logger = LoggerFactory.getLogger(RedisUtil.class);
 
     @Autowired
     private RedisTemplate redisTemplate;
@@ -123,12 +129,13 @@ public class RedisUtil {
     }
 
     //redis解锁lua脚本 保证 锁删除原子性
-    public boolean unlock(String key, String value) {
+    public boolean unlock1(String key, String value) {
         try {
             //使用lua脚本保证删除的原子性，确保解锁
-            String script = "if redis.call('get', KEYS[1]) == ARGV[1] " +
-                    "then return redis.call('del', KEYS[1]) " +
-                    "else return 0 end";
+//            String script = "if redis.call('get', KEYS[1]) == ARGV[1] " +
+//                    "then return redis.call('del', KEYS[1]) " +
+//                    "else return 0 end";
+            String script = "if redis.call('get',KEYS[1]) == ARGV[1] then return redis.call('del',KEYS[1]) else return 0 end";
             Boolean unlockState = (Boolean) redisTemplate.execute((RedisCallback<Boolean>) connection ->
                     connection.eval(script.getBytes(), ReturnType.BOOLEAN, 1,
                             key.getBytes(StandardCharsets.UTF_8), value.getBytes(StandardCharsets.UTF_8)));
@@ -139,5 +146,29 @@ public class RedisUtil {
         }
     }
 
+    /**
+     * 需要释放的分布式锁 lua脚本保证get del的原子性
+     * @param key
+     * @param value
+     * @return
+     */
+    public boolean unlock2(String key, String value){
+        try {
+            String script = "if redis.call('get',KEYS[1]) == ARGV[1] then return redis.call('del',KEYS[1]) else return 0 end";
+            DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>();
+            redisScript.setResultType(Long.class);
+            redisScript.setScriptText(script);
+//            Object executeResult = redisTemplate.execute(redisScript, Arrays.asList(key), value+"1");
+            Object executeResult = redisTemplate.execute(redisScript, Arrays.asList(key), value);
+            //1表示del锁成功 0表示del锁失败
+            System.out.println(executeResult);
+            logger.info("unlock2 释放锁的状态 executeResult:{}",executeResult);
+            return executeResult.equals(1l);
+        } catch (Exception e) {
+            System.out.println("unLock failed for redis key: {}, value: {}"+key+ value);
+            return false;
+        }
+
+    }
 
 }

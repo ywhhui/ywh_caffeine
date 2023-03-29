@@ -17,7 +17,7 @@
         </Console>
 
         <!--Appender 2. INFO日志保存到app.log文件,日志留3天 -->
-        <RollingFile name="business" fileName="${LOG_HOME}/demo.log"
+        <RollingFile name="info" fileName="${LOG_HOME}/demo.log"
                      filePattern="${LOG_HOME}/demo.log.%d{yyyy-MM-dd}">
             <PatternLayout pattern="${logPattern}"/>
             <ThresholdFilter level="INFO" onMatch="ACCEPT" onMismatch="DENY"/>
@@ -62,9 +62,8 @@
     <Loggers>
         <AsyncRoot level="info" includeLocation="true">
             <AppenderRef ref="console"/>
-            <!--<AppenderRef ref="business"/>-->
-            <!--<AppenderRef ref="spring_boot_demo"/>-->
-            <!--<AppenderRef ref="debug"/>-->
+            <AppenderRef ref="info"/>
+            <AppenderRef ref="debug"/>
             <AppenderRef ref="error"/>
         </AsyncRoot>
     </Loggers>
