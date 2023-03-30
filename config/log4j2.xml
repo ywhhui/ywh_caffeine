@@ -6,7 +6,7 @@
         <!-- LOG_HOME变量名，日志存储路径。logPattern日志打印路径 -->
         <property name="LOG_HOME">/ziyan/log/ywh_caffeine</property>
         <!-- 格式化输出：%d格式化日期，%-5level：级别从左显示5个字符宽度，%thread表示线程名，%msg：日志消息，%n是换行符 -->
-        <property name="logPattern" value ="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%logger{0}:%line][%thread] %X{logger_id} - [TID: %X{EagleEye-TraceID}] %msg%n"/>
+        <property name="logPattern" value ="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%logger{0}:%line][%thread] %X{logger_id} - [TID: %X{EagleEye-TraceID}] - [RequestId: %X{requestId}] %msg%n"/>
     </Properties>
 
     <Appenders>
