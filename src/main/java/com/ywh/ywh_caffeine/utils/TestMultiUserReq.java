@@ -3,7 +3,6 @@ package com.ywh.ywh_caffeine.utils;
 import com.google.common.base.Stopwatch;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.ywh.ywh_caffeine.model.ToDoMsg;
 import okhttp3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +12,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 模拟并发
@@ -23,6 +23,8 @@ public class TestMultiUserReq {
     private static final Logger logger = LoggerFactory.getLogger(TestMultiUserReq.class);
 
     public static final Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+
+    static AtomicInteger a = new AtomicInteger(0);
 
     public static void main(String[] args) throws Exception {
         sendMultiReq();
@@ -57,8 +59,10 @@ public class TestMultiUserReq {
                 latch.await();
                 //这里写你请求的接口逻辑代码
                 try {
-                    sendPostJsonMsg("http://127.0.0.1:9003/redis/test/luaTest",gson.toJson(new ToDoMsg()));
-                    logger.info("sendPostJsonMsg end");
+//                    sendPostJsonMsg("http://127.0.0.1:9003/redis/test/luaTest",gson.toJson(new ToDoMsg()));
+//                    logger.info("sendPostJsonMsg end");
+//                    System.out.println(a.incrementAndGet());
+//                    Thread.sleep(500);
                 } catch (Exception e) {
                    logger.info("sendPostJsonMsg error!",e);
                 }
