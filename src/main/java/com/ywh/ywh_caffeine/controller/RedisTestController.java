@@ -19,13 +19,19 @@ public class RedisTestController {
     @Autowired
     private RedisTestService redisTestService;
 
+    /**
+     * RedisTemplate实例化测试
+     * @param todoMsg
+     * @return
+     * @throws Exception
+     */
     @PostMapping("/getList")
     public ResultVo getList(@RequestBody ToDoMsg todoMsg) throws Exception {
         return redisTestService.getList(todoMsg);
     }
 
     /**
-     * 分布式锁测试
+     * 分布式锁测试 lua
      * @param todoMsg
      * @return
      * @throws Exception
@@ -33,5 +39,16 @@ public class RedisTestController {
     @PostMapping("/luaTest")
     public ResultVo luaTest(@RequestBody ToDoMsg todoMsg) throws Exception {
         return redisTestService.luaTest(todoMsg);
+    }
+
+    /**
+     * 分布式锁测试 redisson写法
+     * @param todoMsg
+     * @return
+     * @throws Exception
+     */
+    @PostMapping("/luaTest2")
+    public ResultVo luaTest2(@RequestBody ToDoMsg todoMsg) throws Exception {
+        return redisTestService.luaTest2(todoMsg);
     }
 }

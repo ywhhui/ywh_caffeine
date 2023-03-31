@@ -1,7 +1,9 @@
 package com.ywh.ywh_caffeine.config;
 
+import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
+import org.redisson.config.Config;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
@@ -12,8 +14,6 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
-import java.io.Serializable;
-
 /**
  * 单机版redis  实例化过程 lettuce 和 jedis 两个客户端对比
  * 1.Lettuce 是 一种可伸缩，线程安全，完全非阻塞的Redis客户端，多个线程可以共享一个RedisConnection,它利用Netty NIO 框架来高效地管理多个连接，从而提供了异步和同步数据访问方式，用于构建非阻塞的反应性应用程序
@@ -21,6 +21,12 @@ import java.io.Serializable;
  */
 @Configuration
 public class RedisSingleConfig {
+
+    //jedis pool 连接方式
+    @Autowired
+    private RedisJedisConfig redisJedisConfig;
+
+    private static JedisConnectionFactory factory;
 
     /**
      *   Lettuce客户端初始化配置 设置序列化器 支持json对象 value
@@ -58,14 +64,12 @@ public class RedisSingleConfig {
         return redisTemplate;
     }*/
 
-    @Value("${spring.redis.host}")
-    private String host;
-    @Value("${spring.redis.port}")
-    private int port;
-    @Value("${spring.redis.password}")
-    private String password;
-
-    private static JedisConnectionFactory factory;
+//    @Value("${spring.redis.host}")
+//    private String host;
+//    @Value("${spring.redis.port}")
+//    private int port;
+//    @Value("${spring.redis.password}")
+//    private String password;
 
     /**
      * jedis 客户端连接redis服务 先初始化JedisConnectionFactory
@@ -75,26 +79,22 @@ public class RedisSingleConfig {
     JedisConnectionFactory jedisConnectionFactory() {
         if(null == factory){
             RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
-            config.setHostName(host);
-            config.setPort(port);
-            config.setPassword(password);
+            config.setHostName(redisJedisConfig.getHost());
+            config.setPort(redisJedisConfig.getPort());
+            config.setPassword(redisJedisConfig.getPassword());
             factory = new JedisConnectionFactory(config);
         }
         return factory;
     }
     //factory 初始化后
     @Bean
-    public RedisTemplate<String, Serializable> redisTemplate() {
-        RedisTemplate<String, Serializable> redisTemplate = new RedisTemplate<>();
+    public RedisTemplate<String, Object> redisTemplate() {
+        RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setKeySerializer(new StringRedisSerializer());
         redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
         redisTemplate.setConnectionFactory(jedisConnectionFactory());
         return redisTemplate;
     }
-
-    //jedis pool 连接方式
-    @Autowired
-    private RedisJedisConfig redisJedisConfig;
 
     @Bean
     public JedisPool JedisPoolFactory() {
@@ -106,5 +106,23 @@ public class RedisSingleConfig {
                 redisJedisConfig.getTimeout()*1000, redisJedisConfig.getPassword(), 0);
         return jp;
     }
+
+    /**
+     * redisson 方式实现分布式锁
+     * @return
+     */
+    @Bean
+    public RedissonClient redissonClient() {
+        Config config = new Config();
+        //单节点
+        config.useSingleServer().setAddress("redis://" + redisJedisConfig.getHost() + ":" + redisJedisConfig.getPort()).setPassword(redisJedisConfig.getPassword());
+//        //主从模式配置
+//        config.useMasterSlaveServers().setMasterAddress("").setPassword("").addSlaveAddress(new String[]{"",""});
+//        //集群模式
+//        config.useClusterServers().setScanInterval(2000).addNodeAddress("redis://127.0.0.1:7000", "redis://127.0.0.1:7001");
+
+        return Redisson.create(config);
+    }
+
 
 }

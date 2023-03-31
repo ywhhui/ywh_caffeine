@@ -3,6 +3,7 @@ package com.ywh.ywh_caffeine.utils;
 import com.google.common.base.Stopwatch;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.ywh.ywh_caffeine.model.ToDoMsg;
 import okhttp3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,6 +60,7 @@ public class TestMultiUserReq {
                 latch.await();
                 //这里写你请求的接口逻辑代码
                 try {
+                     sendPostJsonMsg("http://127.0.0.1:9003/redis/test/luaTest2",gson.toJson(new ToDoMsg()));
 //                    sendPostJsonMsg("http://127.0.0.1:9003/redis/test/luaTest",gson.toJson(new ToDoMsg()));
 //                    logger.info("sendPostJsonMsg end");
 //                    System.out.println(a.incrementAndGet());

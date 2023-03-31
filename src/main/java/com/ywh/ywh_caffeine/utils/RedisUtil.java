@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.connection.RedisStringCommands;
-import org.springframework.data.redis.connection.ReturnType;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -22,8 +21,10 @@ public class RedisUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(RedisUtil.class);
 
+//    @Autowired
+//    private RedisTemplate redisTemplate;
     @Autowired
-    private RedisTemplate redisTemplate;
+    private RedisTemplate<String, Object> redisTemplate;
 
     /**
      * 带过期的
@@ -57,7 +58,7 @@ public class RedisUtil {
     }
 
     /**
-     * set nx，上锁
+     * set nx，上锁 加锁，如果加锁成功则返回true，否则返回false
      * @param key 一般设为lock
      *@param value 一般使用uuid
      *@param time 缓存时间，单位为s
@@ -112,7 +113,7 @@ public class RedisUtil {
     }
 
 
-    //redis加锁
+    //redis加锁 另外一种写法
     public boolean lock(String key, String value, long timeout, TimeUnit timeUnit) {
         Boolean locked;
         try {
@@ -128,47 +129,30 @@ public class RedisUtil {
         return locked != null && locked;
     }
 
-    //redis解锁lua脚本 保证 锁删除原子性
-    public boolean unlock1(String key, String value) {
-        try {
-            //使用lua脚本保证删除的原子性，确保解锁
-//            String script = "if redis.call('get', KEYS[1]) == ARGV[1] " +
-//                    "then return redis.call('del', KEYS[1]) " +
-//                    "else return 0 end";
-            String script = "if redis.call('get',KEYS[1]) == ARGV[1] then return redis.call('del',KEYS[1]) else return 0 end";
-            Boolean unlockState = (Boolean) redisTemplate.execute((RedisCallback<Boolean>) connection ->
-                    connection.eval(script.getBytes(), ReturnType.BOOLEAN, 1,
-                            key.getBytes(StandardCharsets.UTF_8), value.getBytes(StandardCharsets.UTF_8)));
-            return unlockState == null || !unlockState;
-        } catch (Exception e) {
-            System.out.println("unLock failed for redis key: {}, value: {}"+key+ value);
-            return false;
-        }
-    }
-
     /**
      * 需要释放的分布式锁 lua脚本保证get del的原子性
      * @param key
      * @param value
      * @return
      */
-    public boolean unlock2(String key, String value){
+    public boolean unlock(String key, String value){
         try {
             String script = "if redis.call('get',KEYS[1]) == ARGV[1] then return redis.call('del',KEYS[1]) else return 0 end";
-            DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>();
-            redisScript.setResultType(Long.class);
+            DefaultRedisScript<Boolean> redisScript = new DefaultRedisScript<>();
+            redisScript.setResultType(Boolean.class);
+//            redisScript.setScriptSource(new ResourceScriptSource(new ClassPathResource("unlock.lua"))); script配置路径
             redisScript.setScriptText(script);
-//            Object executeResult = redisTemplate.execute(redisScript, Arrays.asList(key), value+"1");
-            Object executeResult = redisTemplate.execute(redisScript, Arrays.asList(key), value);
-            //1表示del锁成功 0表示del锁失败
+            Boolean executeResult = redisTemplate.execute(redisScript, Arrays.asList(key), value);
+            //1表示del锁成功 0表示del锁失败  true表示del锁成功 false表示del锁失败
             System.out.println(executeResult);
-            logger.info("unlock2 释放锁的状态 executeResult:{}",executeResult);
-            return executeResult.equals(1l);
+            logger.info("unlock 释放锁的状态 executeResult:{}",executeResult);
+            return executeResult;
         } catch (Exception e) {
             System.out.println("unLock failed for redis key: {}, value: {}"+key+ value);
             return false;
         }
 
     }
+
 
 }

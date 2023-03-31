@@ -17,7 +17,6 @@ public class Application {
 		SpringApplication.run(Application.class, args);
 		//检查caffeine 是否完成初始化
 		CaffeineHelper.getCache();
-		System.out.println("----- http://localhost:8880/demo/ -----");
 	}
 
 }

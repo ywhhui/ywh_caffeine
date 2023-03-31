@@ -8,6 +8,8 @@ import com.ywh.ywh_caffeine.model.ToDoMsg;
 import com.ywh.ywh_caffeine.service.RedisTestService;
 import com.ywh.ywh_caffeine.utils.RedisUtil;
 import com.ywh.ywh_caffeine.vo.ResultVo;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,8 +43,11 @@ public class RedisTestServiceImpl implements RedisTestService {
     @Resource(name = "testTaskExecutor")
     private Executor executor;
 
+    @Autowired
+    private RedissonClient redissonClient;
+
     /**
-     * 本地windows测试
+     * 本地windows测试 RedisTemplate实例化测试
      * @param todoMsg
      * @return
      * @throws Exception
@@ -78,7 +83,7 @@ public class RedisTestServiceImpl implements RedisTestService {
     }
 
     /**
-     * 分布式锁测试
+     * 分布式锁测试 lua脚本写法
      * @param todoMsg
      * @return
      * @throws Exception
@@ -114,7 +119,7 @@ public class RedisTestServiceImpl implements RedisTestService {
                     System.out.println("商品不存在 库存不足");
                     logger.info("未拿到锁的用户 没货了 商品不存在 库存不足");
                     //2.4释放分布式锁，del，保证锁必须被释放-->当业务执行时间小与过期时间时需要释放锁
-                    redisUtil.unlock2("lock",uuid);
+                    redisUtil.unlock("lock",uuid);
                     resultVo.setMessage("未拿到锁的用户 没货了");
                     return resultVo;
                 }
@@ -126,7 +131,7 @@ public class RedisTestServiceImpl implements RedisTestService {
                     System.out.println("库存当前为：" + shenYude);
                     logger.info("拿到锁的用户 并买到了东西 库存当前为 realStock:{}",shenYude);
                     //2.4释放分布式锁，del，保证锁必须被释放-->当业务执行时间小与过期时间时需要释放锁
-                    redisUtil.unlock2("lock",uuid);
+                    redisUtil.unlock("lock",uuid);
                     resultVo.setMessage("拿到锁的用户 并买到了东西");
                     return resultVo;
                 }
@@ -139,7 +144,7 @@ public class RedisTestServiceImpl implements RedisTestService {
                 System.out.println("再次去获取锁 自旋！");
                 logger.info("未拿到锁的用户 循环去买 分布式锁未释放 再次去获取锁 自旋！");
                 resultVo.setMessage("未拿到锁的用户 循环去买");
-                luaTest(todoMsg);
+//                luaTest(todoMsg);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -151,41 +156,50 @@ public class RedisTestServiceImpl implements RedisTestService {
         return resultVo;
     }
 
-    //lua脚本 集合RedisTemplate 实现并发
-    private ResultVo excuteTask(int productTotal,ResultVo resultVo) {
-
+    /**
+     * 分布式锁测试 redisson写法
+     * @param todoMsg
+     * @return
+     */
+    @Override
+    public ResultVo luaTest2(ToDoMsg todoMsg) throws Exception{
+        //全局唯一静态常量uuid 作为分布式锁的value keyming
+        Stopwatch stopwatch = Stopwatch.createStarted();
+        ResultVo resultVo = new ResultVo();
+        Object productNum = redisUtil.get("productNum");
+        int productTotal = Integer.parseInt(productNum + "");
+        //redisson方式
+        RLock lock = redissonClient.getLock("lock");       //获取锁
+        try {
+            lock.lock();    //上锁
+            logger.info("锁已开启");
+            synchronized (this){
+                if(productTotal==0){
+                    logger.error("商品不存在！");
+                }else{
+                    //获取当前库存
+                    if (productTotal > 0){
+                        int realStock = productTotal - 1;
+                        //更新库存
+                        redisUtil.set("productNum", realStock + "");
+                        logger.info("库存当前为：" + realStock);
+                    }else {
+                        logger.error("扣减失败，库存不足！");
+                    }
+                }
+            }
+        }catch (Exception e){
+            logger.error("系统错误，稍后重试");
+        } finally {
+            lock.unlock();    //删除锁
+            logger.info("锁已关闭");
+        }
+        stopwatch.stop();
+        logger.info("luaTest2耗时:{}--",stopwatch.elapsed(TimeUnit.MILLISECONDS));
         return resultVo;
     }
 
-    //redisson方式
-//        String lockKey = UUID.randomUUID().toString();
-//        RLock lock = redisson.getLock(lockKey);       //获取锁
-//        try {
-//            lock.lock();    //上锁
-//            log.info("锁已开启");
-//            synchronized (this){
-//                if(redisUtil.get("product")==null){
-//                    log.error("商品不存在！");
-//                }else{
-//                    //获取当前库存
-//                    int stock = Integer.parseInt(redisUtil.get("product").toString());
-//                    if (stock > 0){
-//                        int realStock = stock - 1;
-//                        //更新库存
-//                        redisUtil.set("product", realStock + "");
-//                        log.info("库存当前为：" + realStock);
-//                    }else {
-//                        log.warn("扣减失败，库存不足！");
-//                    }
-//                }
-//            }
-//        }catch (Exception e){
-//            log.warn("系统错误，稍后重试");
-//        }
-//        finally {
-//            lock.unlock();    //删除锁
-//            log.info("锁已关闭");
-//        }
+
 
 
 }
