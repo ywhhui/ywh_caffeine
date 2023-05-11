@@ -30,4 +30,6 @@ public interface RedisTestService {
      * @return
      */
     ResultVo luaTest2(ToDoMsg todoMsg)throws Exception;
+
+    ResultVo rarMm(ToDoMsg todoMsg)throws Exception;
 }

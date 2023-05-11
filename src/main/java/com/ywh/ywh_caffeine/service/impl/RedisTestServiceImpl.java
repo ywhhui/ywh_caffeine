@@ -6,8 +6,11 @@ import com.google.gson.GsonBuilder;
 import com.ywh.ywh_caffeine.mapper.CaffeineTestMapper;
 import com.ywh.ywh_caffeine.model.ToDoMsg;
 import com.ywh.ywh_caffeine.service.RedisTestService;
+import com.ywh.ywh_caffeine.utils.PassWordUtil;
 import com.ywh.ywh_caffeine.utils.RedisUtil;
+import com.ywh.ywh_caffeine.utils.UnZip7ZRarUtils;
 import com.ywh.ywh_caffeine.vo.ResultVo;
+import org.apache.logging.log4j.core.async.AsyncLoggerContextSelector;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
@@ -18,6 +21,7 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
@@ -55,6 +59,7 @@ public class RedisTestServiceImpl implements RedisTestService {
     @Override
     public ResultVo getList(ToDoMsg todoMsg) throws Exception {
         String jsonStr = gson.toJson(todoMsg);
+        logger.info("是否为异步日志：{}", AsyncLoggerContextSelector.isSelected());
         logger.info("getList todoMsg:{}",jsonStr);
         ResultVo resultVo = new ResultVo();
         String cacheKey = "redis_test_ywh2"+todoMsg.getId();
@@ -158,6 +163,8 @@ public class RedisTestServiceImpl implements RedisTestService {
 
     /**
      * 分布式锁测试 redisson写法
+     * 我们首先创建了一个 Redisson 客户端对象，并使用单节点配置连接到 Redis 服务器。然后，我们定义了两个方法用于获取和释放分布式锁。在获取锁时，我们使用 getLock()                          方法获取一个名为 lockName 的锁对象，并调用其 lock() 方法来获取锁。在释放锁时，我们同样使用 getLock() 方法获取锁对象，并调用其 unlock() 方法来释放锁。
+                值得注意的是，在获取锁之后，我们应该在 finally 块中释放锁，以确保即使出现异常，锁也会被正确地释放。
      * @param todoMsg
      * @return
      */
@@ -199,7 +206,41 @@ public class RedisTestServiceImpl implements RedisTestService {
         return resultVo;
     }
 
-
+    @Override
+    public ResultVo rarMm(ToDoMsg todoMsg) throws Exception {
+        String source = "D:\\ziyan\\code\\ywh_tool\\zip\\述职报告PPT模板【41套】.rar";
+        String dest = "D:\\ziyan\\code\\ywh_tool\\zip\\1\\";
+        List<String> numberStr = PassWordUtil.getNoA(4);
+//        List<String> numberStr = PassWordUtil.getNumberStr(7);
+        logger.info("密码数:{}",numberStr.size());
+        for (int i = 0; i < 8; i++) {
+            int subNo = numberStr.size() / 8;
+            List<String> numberStrThread = numberStr.subList(subNo*i,subNo*(i+1));
+            //异步执行1
+            CompletableFuture.runAsync(()->{
+//                System.out.println("密码数："+numberStrThread.size());
+                String errRes = "";
+                try {
+                    logger.info("密码fen数:{}",numberStrThread.size());
+                    for (String passwordStr:numberStrThread) {
+                        errRes = passwordStr;
+                        boolean unRarResult = UnZip7ZRarUtils.unRar(source, dest, passwordStr);
+                        if(unRarResult){
+                            System.out.println("解密成功后退出线程："+unRarResult+"-"+passwordStr);
+                            logger.info("解密成功后退出线程 密码是 passwordStr:{}",passwordStr);
+                            break;
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.info("解密error e:{},errRes:{}",e,errRes);
+                }
+            },executor).exceptionally(e->{
+                System.out.println("异步执行失败"+e);
+                return null;
+            });
+        }
+        return null;
+    }
 
 
 }

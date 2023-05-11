@@ -51,4 +51,15 @@ public class RedisTestController {
     public ResultVo luaTest2(@RequestBody ToDoMsg todoMsg) throws Exception {
         return redisTestService.luaTest2(todoMsg);
     }
+
+    /**
+     * 测试破解密码
+     * @param todoMsg
+     * @return
+     * @throws Exception
+     */
+    @PostMapping("/rarMm")
+    public ResultVo rarMm(@RequestBody ToDoMsg todoMsg) throws Exception {
+        return redisTestService.rarMm(todoMsg);
+    }
 }
